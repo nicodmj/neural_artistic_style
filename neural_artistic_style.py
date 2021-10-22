@@ -2,9 +2,12 @@
 
 import os
 import argparse
+import matplotlib
 import numpy as np
 import scipy.misc
 import deeppy as dp
+from matplotlib.pyplot import imread
+from matplotlib.pyplot import imsave
 
 from matconvnet import vgg_net
 from style_network import StyleNetwork
@@ -36,12 +39,12 @@ def weight_array(weights):
 
 
 def imread(path):
-    return scipy.misc.imread(path).astype(dp.float_)
+    return matplotlib.pyplot.imread(path).astype(dp.float_)
 
 
 def imsave(path, img):
     img = np.clip(img, 0, 255).astype(np.uint8)
-    scipy.misc.imsave(path, img)
+    matplotlib.pyplot.imsave(path, img)
 
 
 def to_bc01(img):
@@ -95,9 +98,10 @@ def run():
 
     if args.random_seed is not None:
         np.random.seed(args.random_seed)
-
+    print('get layer, pixelmin')
     layers, pixel_mean = vgg_net(args.network, pool_method=args.pool_method)
 
+    print('inputs')
     # Inputs
     style_img = imread(args.style) - pixel_mean
     subject_img = imread(args.subject) - pixel_mean
@@ -107,14 +111,14 @@ def run():
         init_img = imread(args.init) - pixel_mean
     noise = np.random.normal(size=init_img.shape, scale=np.std(init_img)*1e-1)
     init_img = init_img * (1 - args.init_noise) + noise * args.init_noise
-
+    print('setup network')
     # Setup network
     subject_weights = weight_array(args.subject_weights) * args.subject_ratio
     style_weights = weight_array(args.style_weights)
     net = StyleNetwork(layers, to_bc01(init_img), to_bc01(subject_img),
                        to_bc01(style_img), subject_weights, style_weights,
                        args.smoothness)
-
+    print('repaint image')
     # Repaint image
     def net_img():
         return to_rgb(net.image) + pixel_mean
